@@ -12,6 +12,7 @@ using Excel = Microsoft.Office.Interop.Excel;
 using System.Diagnostics;
 using Microsoft.Office.Tools.Excel;
 using static System.Collections.Specialized.BitVector32;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace PivotPrint
 {
@@ -22,9 +23,6 @@ namespace PivotPrint
 
         public Ribbon1()
         {
-
-
-
         }
 
         public void CustomButton_Click(Office.IRibbonControl control)
@@ -52,30 +50,80 @@ namespace PivotPrint
                     {
                         Excel.PivotTable pivotTable = selection.PivotTable;
 
-                        foreach (Excel.PivotField field in pivotTable.PivotFields())
+                        // Initialize the pivotFields variable
+                        Excel.PivotFields pivotFields = pivotTable.PivotFields();
+
+
+                        //count of pageFields
+                        int pageCount = 0;
+
+                        foreach (Excel.PivotField field in pivotFields)
                         {
-                            Debug.WriteLine($"Name: {field.Name}");
-                            Debug.WriteLine($"Caption: {field.Caption}");
-                            Debug.WriteLine($"Data Type: {field.DataType}");
-                            Debug.WriteLine($"Orientation: {field.Orientation}"); ///////////////this one!!!!!!!!!!!!!
-                            Debug.WriteLine($"Is Calculated: {field.IsCalculated}");
-                            //Debug.WriteLine($"Hidden: {field.Hidden}");
-                            Debug.WriteLine($"Drag To Column: {field.DragToColumn}");
-                            Debug.WriteLine($"Drag To Data: {field.DragToData}");
-                            Debug.WriteLine($"Drag To Hide: {field.DragToHide}");
-                            Debug.WriteLine($"Drag To Page: {field.DragToPage}");
-                            Debug.WriteLine($"Drag To Row: {field.DragToRow}");
-                            Debug.WriteLine($"Repeat Labels: {field.RepeatLabels}");
-                            Debug.WriteLine($"Show All Items: {field.ShowAllItems}");
-                            //Debug.WriteLine($"Show Detail: {field.ShowDetail}");
-
-
-
+                            // Check if the pivot field is a page field
+                            if (field.Orientation == Excel.XlPivotFieldOrientation.xlPageField)
+                            {
+                                pageCount += 1;
+                            }
                         }
+
+                        //get fields array
+                        PivotField[] fields = new PivotField[pageCount];
+                        int i = 0;
+                        foreach (Excel.PivotField field in pivotFields)
+                        {
+                            // Check if the pivot field is a page field
+                            if (field.Orientation == Excel.XlPivotFieldOrientation.xlPageField)
+                            {
+                                fields[i] = field;
+                                i += 1;
+                            }
+                        }
+
+                        //Dialog
+                        PivotField selectedField = null;
+                        String folderPath = null;
+                        
+
+
+
+                        SelectFieldDialog selectFieldDialog = new SelectFieldDialog(fields);
+                        DialogResult result = selectFieldDialog.ShowDialog();
+                        if (result == DialogResult.OK) { selectedField = selectFieldDialog.SelectedPivotField; folderPath = selectFieldDialog.folderPath; }
+                        else { return; }
+
+
+                        loadingForm loadingForm = new loadingForm((selectedField.PivotItems() as PivotItems).Count);
+                        loadingForm.Show();
+                        i = 0;
+                        foreach (Excel.PivotItem item in selectedField.PivotItems())
+                        {
+                            pivotTable.PivotFields(selectedField.Name).CurrentPage = item.Name;
+
+                            if (folderPath != null)
+                            {
+                                String filepath = folderPath + "/" + worksheet.Name + "_" + selectedField.Name + "_" + item.Name + "_" + DateTime.Now.ToShortDateString().Replace('/', '-');
+                                Debug.WriteLine(filepath);
+                                worksheet.ExportAsFixedFormat(Excel.XlFixedFormatType.xlTypePDF, filepath);
+                            }
+                            else
+                            {
+                                worksheet.PrintOutEx(Preview: true);
+                            }
+                            i++;
+                            loadingForm.UpdateProgress(i);
+                        }
+                        loadingForm.CloseMessageBox();
+                        MessageBox.Show("Finished!");
+
+
+
+
+                        Debug.WriteLine(selectedField.Name);
+                        Debug.WriteLine("Number of Page Fields: " + pivotFields.Count); // Output the count of page fields
                     }
                     else
                     {
-                        MessageBox.Show("Please right-click on a pivot table.");
+                        Debug.WriteLine("Selection is not a pivot table.");
                     }
                 }
                 else

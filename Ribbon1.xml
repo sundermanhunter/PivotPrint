@@ -2,7 +2,7 @@
 <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
 	<contextMenus>
 		<contextMenu idMso="ContextMenuPivotTable">
-			<button id="customButton" label="Custom Button" insertBeforeMso="Copy" onAction="CustomButton_Click"/>
+			<button id="customButton" label="Pivot Print" insertBeforeMso="Copy" onAction="CustomButton_Click"/>
 		</contextMenu>
 	</contextMenus>
 </customUI>
